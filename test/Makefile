@@ -1,11 +1,11 @@
 SUFFIXES += .d
 
-SRC = tsp.cpp
+SRC = simple.cpp
 
 OBJ := $(SRC:.cpp=.o) test_suite.o
 DEP := $(SRC:.cpp=.d) test_suite.d
 
-CXXFLAGS += -std=c++14 -Wall -Wextra -Werror -pedantic -I..
+CXXFLAGS += -std=c++1z -Wall -Wextra -Werror -pedantic -I..
 
 NODEPS = clean
 
