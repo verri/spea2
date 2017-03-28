@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <iosfwd>
 #include <type_traits>
 #include <vector>
 
@@ -38,6 +39,17 @@ template <std::size_t N, typename T> class algorithm<N, T, meta::requires<Indivi
                 "individual.f() should return a std::array with N elements");
 
 public:
+  struct solution
+  {
+    individual_type individual;
+    double fitness = 0.0;
+
+    friend auto operator<<(std::ostream& os, const solution& s) -> std::ostream&
+    {
+      return os << s.individual << ", fitness=(" << s.fitness << ")";
+    }
+  };
+
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
             double mutation_rate, double crossover_rate)
     : next_population_(std::move(population))
@@ -56,12 +68,12 @@ public:
     environmental_selection();
   }
 
-  auto nondominated()
+  auto nondominated() const
   {
     return boost::make_iterator_range(archive_.begin(), end_nondominated_);
   }
 
-  auto archive() const -> const std::vector<individual_type>& { return archive_; }
+  decltype(auto) archive() const { return (archive_); }
 
 private:
   auto environmental_selection() -> void
@@ -95,7 +107,7 @@ private:
         ++past_nondominated;
     }
 
-    end_nondominated_ = archive_.begin() + past_nondominated;
+    end_nondominated_ = archive_.cbegin() + past_nondominated;
 
     if (past_nondominated == archive_size_)
       return;
@@ -121,7 +133,7 @@ private:
 
   std::vector<f_type> fx_;
 
-  typename std::vector<individual_type>::iterator end_nondominated_;
+  typename std::vector<individual_type>::const_iterator end_nondominated_;
 };
 
 template <typename T, typename = meta::requires<Individual<T>>>
