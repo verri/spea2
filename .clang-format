@@ -21,7 +21,7 @@ BreakBeforeTernaryOperators: true
 BreakConstructorInitializersBeforeComma: false
 BinPackParameters: true
 BinPackArguments: true
-ColumnLimit:     130
+ColumnLimit:     90
 ConstructorInitializerAllOnOneLineOrOnePerLine: false
 ConstructorInitializerIndentWidth: 2
 DerivePointerAlignment: false
@@ -63,5 +63,6 @@ SpaceBeforeParens: ControlStatements
 DisableFormat:   false
 ReflowComments: true
 SortIncludes: true
+BreakConstructorInitializersBeforeComma: true
 ...
 
