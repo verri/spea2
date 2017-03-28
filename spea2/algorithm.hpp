@@ -6,6 +6,7 @@
 
 #include <algorithm>
 #include <array>
+#include <cmath>
 #include <iosfwd>
 #include <type_traits>
 #include <vector>
@@ -55,7 +56,9 @@ public:
 
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
             double mutation_rate, double crossover_rate)
-    : archive_size_(archive_size)
+    : population_size_(population.size())
+    , archive_size_(archive_size)
+    , k_(std::sqrt(population_size_ + archive_size_))
     , mutation_rate_(mutation_rate)
     , crossover_rate_(crossover_rate)
   {
@@ -79,7 +82,7 @@ public:
 
   auto nondominated() const
   {
-    return boost::make_iterator_range(archive_.begin(), end_nondominated_);
+    return util::make_iterator_range(archive_.begin(), end_nondominated_);
   }
 
   decltype(auto) archive() const { return (archive_); }
@@ -150,8 +153,27 @@ private:
           if (dominates(fx_[j], fx_[i]))
             archive_[i].fitness += strength_[j];
 
-      // TODO: Distances:
-      // TODO: Fitness:
+      //  Distances:
+      auto tree = util::rtree<N>{};
+      for (const auto i : all_ix)
+        tree.insert(std::make_pair(util::to_point(fx_[i]), i));
+
+      // Fitness:
+      for (const auto i : dominated_ix)
+      {
+        const auto current = util::to_point(fx_[i]);
+        auto kth_nei = util::indexed_point<N>{};
+
+        tree.query(util::nearest(current, k_), util::setter(kth_nei));
+        archive_[i].fitness += 1.0 / (util::distance(current, kth_nei.first) + 2);
+      }
+
+      // Partially sort dominated
+      std::partial_sort( //
+        archive_.begin() + past_nondominated, //
+        archive_.begin() + archive_size_, //
+        archive_.end(), //
+        [](const auto& x, const auto& y) { return x.fitness < y.fitness; });
     }
     else
     {
@@ -163,8 +185,8 @@ private:
   }
 
   std::vector<solution_type> next_population_, archive_;
-  std::size_t archive_size_;
-  double mutation_rate_, crossover_rate_;
+  const std::size_t population_size_, archive_size_, k_;
+  const double mutation_rate_, crossover_rate_;
 
   std::vector<f_type> fx_;
   std::vector<std::size_t> strength_;

@@ -64,12 +64,11 @@ using fallback_t = std::enable_if_t<conjunction<negation<Checks...>>::value, R>;
 namespace detail
 {
 
-template <typename T> struct is_std_array : std::false_type
+template <typename T> struct is_double_array : std::false_type
 {
 };
 
-template <typename V, std::size_t N>
-struct is_std_array<std::array<V, N>> : std::true_type
+template <std::size_t N> struct is_double_array<std::array<double, N>> : std::true_type
 {
 };
 
@@ -100,7 +99,7 @@ struct Individual<T,
                     meta::compiles<T, detail::has_crossover>,     //
                     std::is_same<detail::use_crossover<T>, void>, //
                     meta::compiles<T, detail::has_f>,             //
-                    detail::is_std_array<detail::use_f<T>>        //
+                    detail::is_double_array<detail::use_f<T>>     //
                     >>> : std::true_type
 {
 };

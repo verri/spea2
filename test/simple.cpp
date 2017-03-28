@@ -53,6 +53,7 @@ TEST_CASE("Simple test problem", "[foobar]")
   auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.01, 0.4);
   // model.iterate();
 
+  std::cout << std::setprecision(6) << std::fixed;
   std::cout << "Archive: " << std::endl;
   for (const auto& ind : model.archive())
     std::cout << '\t' << ind << std::endl;
