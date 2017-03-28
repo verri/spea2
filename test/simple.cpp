@@ -18,14 +18,12 @@ static auto drand() { return static_cast<double>(std::rand()) / RAND_MAX; }
 class individual
 {
 public:
-  using fitness_type = std::array<double, 2u>;
-
   individual(double x)
     : x{x}
   {
   }
 
-  auto fitness() const -> fitness_type { return {{f1(x), f2(x)}}; }
+  auto f() const -> std::array<double, 2u> { return {{f1(x), f2(x)}}; }
 
   auto mutate(double rate) -> void
   {
@@ -37,7 +35,8 @@ public:
 
   friend auto operator<<(std::ostream& os, const individual& i) -> std::ostream&
   {
-    return os << i.x << " (" << i.fitness()[0] << ", " << i.fitness()[1] << ')';
+    const auto fx = i.f();
+    return os << i.x << " (" << fx[0] << ", " << fx[1] << ')';
   }
 
 private:
@@ -51,8 +50,8 @@ TEST_CASE("Simple test problem", "[foobar]")
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
                   drand);
 
-  auto model = spea2::make_algorithm(std::move(initial_population), 3u, 0.01, 0.4);
-  model.iterate();
+  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.01, 0.4);
+  // model.iterate();
 
   std::cout << "Archive: " << std::endl;
   for (const auto& ind : model.archive())

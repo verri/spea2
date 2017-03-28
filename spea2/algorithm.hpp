@@ -32,55 +32,28 @@ template <std::size_t N, typename T, typename E = void> class algorithm
 template <std::size_t N, typename T> class algorithm<N, T, meta::requires<Individual<T>>>
 {
   using individual_type = T;
-  using fitness_type = decltype(std::declval<const individual_type&>().fitness());
+  using f_type = detail::use_f<individual_type>;
 
-  static_assert(std::tuple_size<fitness_type>::value == N,
-                "individual.fitness() should return a std::array with N elements");
+  static_assert(std::tuple_size<f_type>::value == N,
+                "individual.f() should return a std::array with N elements");
 
 public:
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
             double mutation_rate, double crossover_rate)
-    : population_(std::move(population))
+    : next_population_(std::move(population))
     , archive_size_(archive_size)
     , mutation_rate_(mutation_rate)
     , crossover_rate_(crossover_rate)
   {
-    archive_.reserve(population_.size() + archive_size);
-    end_nondominated_ = archive_.begin();
+    archive_.reserve(next_population_.size() + archive_size_);
+    fx_.reserve(next_population_.size() + archive_size_);
+    environmental_selection();
   }
 
   auto iterate() -> void
   {
-    archive_.clear();
-    std::move(population_.begin(), population_.end(), std::back_inserter(archive_));
-    population_.clear();
-
-    auto fitness = util::vtransform(archive_, [](auto&& ind) { return ind.fitness(); });
-
-    auto past_nondominated = 0ul;
-    auto first_dominated = archive_.size();
-
-    while (past_nondominated < first_dominated)
-    {
-      const auto i = past_nondominated;
-      auto is_nondominated = true;
-      for (const auto j : util::range(0u, first_dominated))
-      {
-        if (dominates(fitness[j], fitness[i]))
-        {
-          // Individual i is dominated
-          is_nondominated = false;
-          --first_dominated;
-          std::swap(fitness[i], fitness[first_dominated]);
-          std::swap(archive_[i], archive_[first_dominated]);
-          break;
-        }
-      }
-      if (is_nondominated)
-        ++past_nondominated;
-    }
-
-    end_nondominated_ = archive_.begin() + past_nondominated;
+    // TODO: From Step 5
+    environmental_selection();
   }
 
   auto nondominated()
@@ -91,9 +64,62 @@ public:
   auto archive() const -> const std::vector<individual_type>& { return archive_; }
 
 private:
-  std::vector<individual_type> population_, archive_;
+  auto environmental_selection() -> void
+  {
+    std::transform(next_population_.cbegin(), next_population_.cend(),
+                   std::back_inserter(fx_), [](auto&& ind) { return ind.f(); });
+    std::move(next_population_.begin(), next_population_.end(),
+              std::back_inserter(archive_));
+    next_population_.clear();
+
+    auto past_nondominated = 0ul;
+    auto first_dominated = archive_.size();
+
+    while (past_nondominated < first_dominated)
+    {
+      const auto i = past_nondominated;
+      auto is_nondominated = true;
+      for (const auto j : util::range(0u, first_dominated))
+      {
+        if (dominates(fx_[j], fx_[i]))
+        {
+          // Individual i is dominated
+          is_nondominated = false;
+          --first_dominated;
+          std::swap(fx_[i], fx_[first_dominated]);
+          std::swap(archive_[i], archive_[first_dominated]);
+          break;
+        }
+      }
+      if (is_nondominated)
+        ++past_nondominated;
+    }
+
+    end_nondominated_ = archive_.begin() + past_nondominated;
+
+    if (past_nondominated == archive_size_)
+      return;
+
+    // TODO: calculate fitness
+
+    if (past_nondominated < archive_size_)
+    {
+      // TODO: fill out with the best dominated individuals
+    }
+    else
+    {
+      // TODO: truncate, i.e., ignore some nondominated individuals
+    }
+
+    if (archive_.size() > archive_size_)
+      archive_.erase(archive_.begin() + archive_size_, archive_.end());
+  }
+
+  std::vector<individual_type> next_population_, archive_;
   std::size_t archive_size_;
   double mutation_rate_, crossover_rate_;
+
+  std::vector<f_type> fx_;
 
   typename std::vector<individual_type>::iterator end_nondominated_;
 };
@@ -101,7 +127,7 @@ private:
 template <typename T, typename = meta::requires<Individual<T>>>
 auto make_algorithm(std::vector<T> population, std::size_t archive_size,
                     double mutation_rate, double crossover_rate)
-  -> algorithm<std::tuple_size<detail::use_fitness<T>>::value, T>
+  -> algorithm<std::tuple_size<detail::use_f<T>>::value, T>
 {
   return {std::move(population), archive_size, mutation_rate, crossover_rate};
 }

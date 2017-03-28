@@ -82,9 +82,9 @@ using use_crossover = decltype(std::declval<T&>().crossover(std::declval<T&>()))
 
 template <typename T> using has_crossover = meta::compiles<T, use_crossover>;
 
-template <typename T> using use_fitness = decltype(std::declval<const T&>().fitness());
+template <typename T> using use_f = decltype(std::declval<const T&>().f());
 
-template <typename T> using has_fitness = meta::compiles<T, use_fitness>;
+template <typename T> using has_f = meta::compiles<T, use_f>;
 
 } // namespace detail
 
@@ -99,8 +99,8 @@ struct Individual<T,
                     std::is_same<detail::use_mutate<T>, void>,    //
                     meta::compiles<T, detail::has_crossover>,     //
                     std::is_same<detail::use_crossover<T>, void>, //
-                    meta::compiles<T, detail::has_fitness>,       //
-                    detail::is_std_array<detail::use_fitness<T>>  //
+                    meta::compiles<T, detail::has_f>,             //
+                    detail::is_std_array<detail::use_f<T>>        //
                     >>> : std::true_type
 {
 };
