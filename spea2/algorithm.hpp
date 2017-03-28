@@ -8,11 +8,9 @@
 #include <array>
 #include <cmath>
 #include <iosfwd>
+#include <random>
 #include <type_traits>
 #include <vector>
-
-// NOTE: The resulting fitness is not always 100% compatible because when it is not
-// necessary to calculate, we don't.
 
 namespace spea2
 {
@@ -56,12 +54,13 @@ public:
   };
 
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
-            double mutation_rate, double crossover_rate)
+            double mutation_rate, double crossover_rate, unsigned seed)
     : population_size_(population.size())
     , archive_size_(archive_size)
     , k_(std::sqrt(population_size_ + archive_size_))
     , mutation_rate_(mutation_rate)
     , crossover_rate_(crossover_rate)
+    , generator_(seed)
   {
     next_population_.reserve(population.size());
     std::transform(population.begin(), population.end(),
@@ -75,9 +74,26 @@ public:
     environmental_selection();
   }
 
+  // === Steps 5 and 6 ===
+  // Step 3 (Environmental Selection) is performed at the end to produce the
+  // archive and nondominated sets.
   auto iterate() -> void
   {
-    // TODO: From Step 5
+    // == Mating Selection ==
+    // We perform binary tournament selection with replacement on the archive.
+    auto dist = std::uniform_int_distribution<std::size_t>(0u, archive_.size() - 1u);
+    while (next_population_.size() < population_size_)
+    {
+      const auto i = rand(dist);
+      const auto j = rand(dist);
+      next_population_.push_back(archive_[i].fitness < archive_[j].fitness ? archive_[i]
+                                                                           : archive_[j]);
+    }
+
+    // == Recombination and Mutation ==
+    // TODO
+
+    // == Environmental Selection ==
     environmental_selection();
   }
 
@@ -237,20 +253,27 @@ private:
     }
   }
 
+  template <typename Distribution> auto rand(Distribution& dist)
+  {
+    return dist(generator_);
+  }
+
   std::vector<solution_type> next_population_, archive_;
   const std::size_t population_size_, archive_size_, k_;
   const double mutation_rate_, crossover_rate_;
 
   std::vector<std::size_t> strength_;
   typename decltype(archive_)::const_iterator end_nondominated_;
+
+  std::mt19937 generator_;
 };
 
 template <typename T, typename = meta::requires<Individual<T>>>
 auto make_algorithm(std::vector<T> population, std::size_t archive_size,
-                    double mutation_rate, double crossover_rate)
+                    double mutation_rate, double crossover_rate, unsigned seed)
   -> algorithm<std::tuple_size<detail::use_f<T>>::value, T>
 {
-  return {std::move(population), archive_size, mutation_rate, crossover_rate};
+  return {std::move(population), archive_size, mutation_rate, crossover_rate, seed};
 }
 
 } // namespace spea2

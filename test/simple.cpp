@@ -50,7 +50,8 @@ TEST_CASE("Simple test problem", "[foobar]")
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
                   drand);
 
-  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.01, 0.4);
+  const auto seed = std::random_device{}();
+  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.01, 0.4, seed);
   // model.iterate();
 
   std::cout << std::setprecision(6) << std::fixed;
