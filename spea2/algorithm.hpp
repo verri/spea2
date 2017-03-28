@@ -89,138 +89,152 @@ public:
   decltype(auto) archive() const { return (archive_); }
 
 private:
+  // === Step 3 of the algorithm ===
+  // Step 2 - Fitness assignment is called as part of this step.
   auto environmental_selection() -> void
   {
+    // First, we move every solution to the archive.  Thus, it will contain
+    // both the previous archive and the previous population.  Then, we apply
+    // the necessary operations to keep the best solutions.
     std::move(next_population_.begin(), next_population_.end(),
               std::back_inserter(archive_));
 
+    // Next population gets empty for the Mating Selection, that should be
+    // done at the iterate() method.
     next_population_.clear();
 
-    auto past_nondominated = 0ul;
-    auto first_dominated = archive_.size();
+    // We assign the fitness of every solution. Even to those that were at
+    // the previous archive, since fitness depends on the density of the
+    // combined population.
+    fitness_assignment();
 
-    while (past_nondominated < first_dominated)
-    {
-      const auto i = past_nondominated;
-      auto is_nondominated = true;
-      for (const auto j : util::range(0u, first_dominated))
-      {
-        if (dominates(archive_[j].fx, archive_[i].fx))
-        {
-          // Individual i is dominated
-          is_nondominated = false;
-          --first_dominated;
-          std::swap(archive_[i], archive_[first_dominated]);
-          break;
-        }
-      }
-      if (is_nondominated)
-        ++past_nondominated;
-    }
+    // Now, we count how many individuals are nondominated.
+    const auto nondominated_count = static_cast<std::size_t>(std::count_if(
+      archive_.begin(), archive_.end(), [](const auto& s) { return s.fitness < 1.0; }));
 
-    end_nondominated_ = archive_.cbegin() + past_nondominated;
+    // Then, we partially sort the individuals guaranteeing that all nondominated
+    // individuals are properly sorted.
+    std::partial_sort(                                                //
+      archive_.begin(),                                               //
+      archive_.begin() + std::max(nondominated_count, archive_size_), //
+      archive_.end(),                                                 //
+      [](const auto& x, const auto& y) { return x.fitness < y.fitness; });
 
-    if (past_nondominated < archive_size_)
-    {
-      // Strength:
-      strength_.clear();
-      std::fill_n(std::back_inserter(strength_), archive_.size(), 0.0);
+    // If there are too many nondominated individuals,
+    // apply the truncation procedure.
+    if (nondominated_count > archive_size_)
+      truncate(nondominated_count);
 
-      const auto all_ix = util::indexes_of(archive_, strength_);
-      const auto dominated_ix = util::range(past_nondominated, archive_.size());
-      const auto nondominated_ix = util::range(0u, past_nondominated);
-
-      for (const auto i : all_ix)
-        for (const auto j : dominated_ix)
-          if (dominates(archive_[i].fx, archive_[j].fx))
-            ++strength_[i];
-
-      // Raw Fitness:
-      for (const auto i : nondominated_ix)
-        archive_[i].fitness = 0.0;
-
-      for (const auto i : dominated_ix)
-        for (const auto j : all_ix)
-          if (dominates(archive_[j].fx, archive_[i].fx))
-            archive_[i].fitness += strength_[j];
-
-      //  Distances:
-      auto tree = util::rtree<N>{};
-      for (const auto i : all_ix)
-        tree.insert(util::to_point(archive_[i].fx));
-
-      // Fitness:
-      for (const auto i : dominated_ix)
-      {
-        const auto current = util::to_point(archive_[i].fx);
-        auto kth_nei = util::point<N>{};
-
-        tree.query(util::nearest(current, k_), util::setter(kth_nei));
-        archive_[i].fitness += 1.0 / (util::distance(current, kth_nei) + 2.0);
-      }
-
-      // Partially sort dominated
-      std::partial_sort(                      //
-        archive_.begin() + past_nondominated, //
-        archive_.begin() + archive_size_,     //
-        archive_.end(),                       //
-        [](const auto& x, const auto& y) { return x.fitness < y.fitness; });
-    }
-    else if (past_nondominated > archive_size_)
-    {
-      auto tree = util::rtree<N>{};
-      for (const auto i : util::range(0u, past_nondominated))
-        tree.insert(util::to_point(archive_[i].fx));
-
-      auto vdistances = std::vector<std::vector<double>>(past_nondominated);
-      for (auto& distances : vdistances)
-        distances.reserve(k_);
-
-      auto neighborhood = std::vector<util::point<N>>();
-      neighborhood.reserve(k_);
-
-      while (past_nondominated > archive_size_)
-      {
-        for (auto& distances : vdistances)
-          distances.clear();
-
-        for (const auto i : util::range(0u, past_nondominated))
-        {
-          neighborhood.clear();
-          const auto current = util::to_point(archive_[i].fx);
-
-          tree.query(util::nearest(current, k_), std::back_inserter(neighborhood));
-          for (const auto& neighbor : neighborhood)
-            vdistances[i].push_back(util::distance(current, neighbor));
-        }
-
-        const auto i = std::min_element(vdistances.begin(), vdistances.end(),
-                                        [](const auto& a, const auto& b) {
-                                          for (const auto i : util::indexes_of(a, b))
-                                            if (a[i] < b[i])
-                                              return true;
-                                            else if (a[i] > b[i])
-                                              return false;
-                                          return false;
-                                        }) -
-                       vdistances.begin();
-
-        --past_nondominated;
-        tree.remove(util::to_point(archive_[i].fx));
-        std::swap(archive_[i], archive_[past_nondominated]);
-
-        vdistances.pop_back();
-      }
-
-      for (const auto i : util::range(0u, past_nondominated))
-        archive_[i].fitness = 1.0 / (vdistances[i].back() + 2.0);
-
-      // Update end_nondominated_
-      end_nondominated_ = archive_.cbegin() + past_nondominated;
-    }
-
+    // Keep only the `archive_size_` best individuals.
     if (archive_.size() > archive_size_)
       archive_.erase(archive_.begin() + archive_size_, archive_.end());
+
+    // Updates nondominated end.
+    end_nondominated_ = archive_.cbegin() + std::min(nondominated_count, archive_size_);
+  }
+
+  // === Step 2 of the algorithm ===
+  auto fitness_assignment() -> void
+  {
+    // == Strength ==
+    // We reset strength values, since they depend on the combined population.
+    strength_.clear();
+    std::fill_n(std::back_inserter(strength_), archive_.size(), 0ul);
+
+    const auto all_ix = util::indexes_of(archive_, strength_);
+
+    for (const auto i : all_ix)
+      for (const auto j : all_ix)
+        if (dominates(archive_[i].fx, archive_[j].fx))
+          ++strength_[i];
+
+    // == Raw Fitness ==
+    // Assign raw fitness based on the strength values.
+    for (const auto i : all_ix)
+      archive_[i].fitness = 0.0;
+
+    for (const auto i : all_ix)
+      for (const auto j : all_ix)
+        if (dominates(archive_[j].fx, archive_[i].fx))
+          archive_[i].fitness += strength_[j];
+
+    // == Tree of distances ==
+    auto tree = util::rtree<N>{};
+    for (const auto i : all_ix)
+      tree.insert(util::to_point(archive_[i].fx));
+
+    // == Density and Fitness ==
+    // Update raw fitness adding the density information.
+    for (const auto i : all_ix)
+    {
+      const auto current = util::to_point(archive_[i].fx);
+      auto kth_nei = util::point<N>{};
+
+      tree.query(util::nearest(current, k_), util::setter(kth_nei));
+      archive_[i].fitness += 1.0 / (util::distance(current, kth_nei) + 2.0);
+    }
+  }
+
+  // === Truncation procedure ===
+  auto truncate(std::size_t nondominated_count) -> void
+  {
+    // The distances are now calculated only inside the nondominated set.
+    auto tree = util::rtree<N>{};
+    for (const auto i : util::range(0u, nondominated_count))
+      tree.insert(util::to_point(archive_[i].fx));
+
+    // Distances up to the kth neighbor are stored.
+    // It may not be required to calculate so many distances, but we are doing
+    // so because the truncation procedure is probably rare and we want to
+    // comply to the original algorithm.
+    auto vdistances = std::vector<std::vector<double>>(nondominated_count);
+    for (auto& distances : vdistances)
+      distances.reserve(k_);
+
+    // Cache for the neighborhood so we don't keep allocating and deallocating
+    // unnecessarily.
+    auto neighborhood = std::vector<util::point<N>>();
+    neighborhood.reserve(k_);
+
+    // Iteratively "remove" some individuals.  In fact, we just move them outside
+    // the range of nondominated.
+    while (nondominated_count > archive_size_)
+    {
+      // Clear old distances.
+      for (auto& distances : vdistances)
+        distances.clear();
+
+      // Fill all distances up to the kth neighbor.
+      for (const auto i : util::range(0u, nondominated_count))
+      {
+        neighborhood.clear();
+        const auto current = util::to_point(archive_[i].fx);
+
+        tree.query(util::nearest(current, k_), std::back_inserter(neighborhood));
+        for (const auto& neighbor : neighborhood)
+          vdistances[i].push_back(util::distance(current, neighbor));
+      }
+
+      // Find the index which have smallest distance, and "remove" it.
+      static const auto cmp = //
+        +[](const std::vector<double>& a, const std::vector<double>& b) -> bool {
+        for (const auto i : util::indexes_of(a, b))
+          if (a[i] < b[i])
+            return true;
+          else if (a[i] > b[i])
+            return false;
+        return true;
+      };
+
+      const auto i = std::distance( //
+        vdistances.begin(),         //
+        std::min_element(vdistances.begin(), vdistances.end(), cmp));
+
+      --nondominated_count;
+      tree.remove(util::to_point(archive_[i].fx));
+      std::swap(archive_[i], archive_[nondominated_count]);
+      vdistances.pop_back();
+    }
   }
 
   std::vector<solution_type> next_population_, archive_;
