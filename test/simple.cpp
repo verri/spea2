@@ -36,7 +36,7 @@ public:
   friend auto operator<<(std::ostream& os, const individual& i) -> std::ostream&
   {
     const auto fx = i.f();
-    return os << "x=(" << i.x << "), f(x)=(" << fx[0] << ", " << fx[1] << ')';
+    return os << "x = " << i.x << ",\tf(x) = [" << fx[0] << ", " << fx[1] << ']';
   }
 
 private:

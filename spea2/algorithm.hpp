@@ -39,24 +39,29 @@ template <std::size_t N, typename T> class algorithm<N, T, meta::requires<Indivi
                 "individual.f() should return a std::array with N elements");
 
 public:
-  struct solution
+  struct solution_type
   {
     individual_type individual;
-    double fitness = 0.0;
+    double fitness;
 
-    friend auto operator<<(std::ostream& os, const solution& s) -> std::ostream&
+    friend auto operator<<(std::ostream& os, const solution_type& s) -> std::ostream&
     {
-      return os << s.individual << ", fitness=(" << s.fitness << ")";
+      return os << s.individual << ",\tfitness = " << s.fitness;
     }
   };
 
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
             double mutation_rate, double crossover_rate)
-    : next_population_(std::move(population))
-    , archive_size_(archive_size)
+    : archive_size_(archive_size)
     , mutation_rate_(mutation_rate)
     , crossover_rate_(crossover_rate)
   {
+    next_population_.reserve(population.size());
+    std::transform(population.begin(), population.end(),
+                   std::back_inserter(next_population_), [](auto& ind) -> solution_type {
+                     return {std::move(ind), 0.0};
+                   });
+
     archive_.reserve(next_population_.size() + archive_size_);
     fx_.reserve(next_population_.size() + archive_size_);
     environmental_selection();
@@ -79,9 +84,12 @@ private:
   auto environmental_selection() -> void
   {
     std::transform(next_population_.cbegin(), next_population_.cend(),
-                   std::back_inserter(fx_), [](auto&& ind) { return ind.f(); });
+                   std::back_inserter(fx_),
+                   [](const auto& sol) { return sol.individual.f(); });
+
     std::move(next_population_.begin(), next_population_.end(),
               std::back_inserter(archive_));
+
     next_population_.clear();
 
     auto past_nondominated = 0ul;
@@ -127,13 +135,13 @@ private:
       archive_.erase(archive_.begin() + archive_size_, archive_.end());
   }
 
-  std::vector<individual_type> next_population_, archive_;
+  std::vector<solution_type> next_population_, archive_;
   std::size_t archive_size_;
   double mutation_rate_, crossover_rate_;
 
   std::vector<f_type> fx_;
 
-  typename std::vector<individual_type>::const_iterator end_nondominated_;
+  typename decltype(archive_)::const_iterator end_nondominated_;
 };
 
 template <typename T, typename = meta::requires<Individual<T>>>
