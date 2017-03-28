@@ -55,20 +55,14 @@ public:
 
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
             double mutation_rate, double crossover_rate, unsigned seed)
-    : population_size_(population.size())
+    : next_population_(std::move(population))
+    , population_size_(next_population_.size())
     , archive_size_(archive_size)
     , k_(std::sqrt(population_size_ + archive_size_))
     , mutation_rate_(mutation_rate)
     , crossover_rate_(crossover_rate)
     , generator_(seed)
   {
-    next_population_.reserve(population.size());
-    std::transform(population.begin(), population.end(),
-                   std::back_inserter(next_population_), [](auto& ind) -> solution_type {
-                     auto fx = ind.f();
-                     return {std::move(ind), std::move(fx), 0.0};
-                   });
-
     archive_.reserve(next_population_.size() + archive_size_);
     strength_.reserve(population.size() + archive_size_);
     environmental_selection();
@@ -86,12 +80,14 @@ public:
     {
       const auto i = rand(dist);
       const auto j = rand(dist);
-      next_population_.push_back(archive_[i].fitness < archive_[j].fitness ? archive_[i]
-                                                                           : archive_[j]);
+      next_population_.push_back(
+        archive_[i].fitness < archive_[j].fitness ? archive_[i].x : archive_[j].x);
     }
 
     // == Recombination and Mutation ==
-    // TODO
+    // TODO: tirar dúvidas com o professor!
+    for (auto& x : next_population_)
+      x.mutate(mutation_rate_);
 
     // == Environmental Selection ==
     environmental_selection();
@@ -109,11 +105,15 @@ private:
   // Step 2 - Fitness assignment is called as part of this step.
   auto environmental_selection() -> void
   {
-    // First, we move every solution to the archive.  Thus, it will contain
-    // both the previous archive and the previous population.  Then, we apply
-    // the necessary operations to keep the best solutions.
-    std::move(next_population_.begin(), next_population_.end(),
-              std::back_inserter(archive_));
+    // First, we move every individual to the archive.  Thus, it will contain
+    // both the previous archive and the previous population.  It is necessary
+    // to calculate f(x) for the individuals in the previous population.
+    // In the next steps, we apply the necessary operations to keep the best solutions.
+    std::transform(next_population_.begin(), next_population_.end(),
+                   std::back_inserter(archive_), [](auto& x) -> solution_type {
+                     auto fx = x.f();
+                     return {std::move(x), std::move(fx), 0.0};
+                   });
 
     // Next population gets empty for the Mating Selection, that should be
     // done at the iterate() method.
@@ -258,7 +258,8 @@ private:
     return dist(generator_);
   }
 
-  std::vector<solution_type> next_population_, archive_;
+  std::vector<individual_type> next_population_;
+  std::vector<solution_type> archive_;
   const std::size_t population_size_, archive_size_, k_;
   const double mutation_rate_, crossover_rate_;
 

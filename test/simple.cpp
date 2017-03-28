@@ -46,20 +46,26 @@ private:
 TEST_CASE("Simple test problem", "[foobar]")
 {
   auto initial_population = std::vector<individual>{};
-  initial_population.reserve(7u);
+  initial_population.reserve(5u);
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
                   drand);
 
   const auto seed = std::random_device{}();
-  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.01, 0.4, seed);
-  // model.iterate();
+  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.1, 0.4, seed);
 
   std::cout << std::setprecision(6) << std::fixed;
-  std::cout << "Archive: " << std::endl;
-  for (const auto& ind : model.archive())
-    std::cout << '\t' << ind << std::endl;
+  for (auto t = 0u; t < 3; ++t)
+  {
+    std::cout << "=== Iteration " << t << " ===" << std::endl;
+    std::cout << "Archive: " << std::endl;
+    for (const auto& ind : model.archive())
+      std::cout << '\t' << ind << std::endl;
 
-  std::cout << "Nondominated: " << std::endl;
-  for (const auto& ind : model.nondominated())
-    std::cout << '\t' << ind << std::endl;
+    std::cout << "Nondominated: " << std::endl;
+    for (const auto& ind : model.nondominated())
+      std::cout << '\t' << ind << std::endl;
+    std::cout << std::endl;
+
+    model.iterate();
+  }
 }
