@@ -12,32 +12,39 @@ namespace meta
 // TODO: In C++17, use std version.
 template <typename...> using void_t = void;
 
-template <typename...> struct conjunction : std::true_type {
+template <typename...> struct conjunction : std::true_type
+{
 };
 
-template <typename B> struct conjunction<B> : B {
+template <typename B> struct conjunction<B> : B
+{
 };
 
 template <typename B, typename... Bs>
-struct conjunction<B, Bs...> : std::conditional_t<bool(B::value), conjunction<Bs...>, B> {
+struct conjunction<B, Bs...> : std::conditional_t<bool(B::value), conjunction<Bs...>, B>
+{
 };
 
 template <bool B> using bool_constant = std::integral_constant<bool, B>;
 
-template <typename B> struct negation : bool_constant<!B::value> {
+template <typename B> struct negation : bool_constant<!B::value>
+{
 };
 
-template <typename T> struct always_false : std::false_type {
+template <typename T> struct always_false : std::false_type
+{
 };
 
 // Concepts emulation
 
 template <typename T, template <typename> class Expression, typename = void_t<>>
-struct compiles : std::false_type {
+struct compiles : std::false_type
+{
 };
 
 template <typename T, template <typename> class Expression>
-struct compiles<T, Expression, void_t<Expression<T>>> : std::true_type {
+struct compiles<T, Expression, void_t<Expression<T>>> : std::true_type
+{
 };
 
 template <typename... Checks>
@@ -57,11 +64,13 @@ using fallback_t = std::enable_if_t<conjunction<negation<Checks...>>::value, R>;
 namespace detail
 {
 
-template <typename T> struct is_std_array : std::false_type {
+template <typename T> struct is_std_array : std::false_type
+{
 };
 
 template <typename V, std::size_t N>
-struct is_std_array<std::array<V, N>> : std::true_type {
+struct is_std_array<std::array<V, N>> : std::true_type
+{
 };
 
 template <typename T> using use_mutate = decltype(std::declval<T&>().mutate(0.0));
@@ -79,7 +88,8 @@ template <typename T> using has_fitness = meta::compiles<T, use_fitness>;
 
 } // namespace detail
 
-template <typename T, typename E = void> struct Individual : std::false_type {
+template <typename T, typename E = void> struct Individual : std::false_type
+{
 };
 
 template <typename T>
@@ -91,7 +101,8 @@ struct Individual<T,
                     std::is_same<detail::use_crossover<T>, void>, //
                     meta::compiles<T, detail::has_fitness>,       //
                     detail::is_std_array<detail::use_fitness<T>>  //
-                    >>> : std::true_type {
+                    >>> : std::true_type
+{
 };
 } // namespace spea2
 

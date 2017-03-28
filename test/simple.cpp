@@ -37,7 +37,7 @@ public:
 
   friend auto operator<<(std::ostream& os, const individual& i) -> std::ostream&
   {
-    return os << i.x << ' ' << i.fitness()[0] << ' ' << i.fitness()[1];
+    return os << i.x << " (" << i.fitness()[0] << ", " << i.fitness()[1] << ')';
   }
 
 private:
@@ -47,11 +47,18 @@ private:
 TEST_CASE("Simple test problem", "[foobar]")
 {
   auto initial_population = std::vector<individual>{};
-  initial_population.reserve(17u);
+  initial_population.reserve(7u);
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
                   drand);
 
-  auto model =
-    spea2::algorithm<2u, individual>(std::move(initial_population), 10u, 0.01, 0.4);
-  (void)model;
+  auto model = spea2::make_algorithm(std::move(initial_population), 3u, 0.01, 0.4);
+  model.iterate();
+
+  std::cout << "Archive: " << std::endl;
+  for (const auto& ind : model.archive())
+    std::cout << '\t' << ind << std::endl;
+
+  std::cout << "Nondominated: " << std::endl;
+  for (const auto& ind : model.nondominated())
+    std::cout << '\t' << ind << std::endl;
 }

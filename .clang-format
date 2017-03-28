@@ -48,7 +48,7 @@ Standard:        Cpp11
 IndentWidth:     2
 TabWidth:        2
 UseTab:          Never
-BreakBeforeBraces: Linux
+BreakBeforeBraces: Allman
 SpacesInParentheses: false
 SpacesInSquareBrackets: false
 SpacesInAngles:  false
