@@ -10,6 +10,9 @@
 #include <type_traits>
 #include <vector>
 
+// NOTE: The resulting fitness is not always 100% compatible because when it is not
+// necessary to calculate, we don't.
+
 namespace spea2
 {
 
@@ -64,6 +67,7 @@ public:
 
     archive_.reserve(next_population_.size() + archive_size_);
     fx_.reserve(next_population_.size() + archive_size_);
+    strength_.reserve(population.size() + archive_size_);
     environmental_selection();
   }
 
@@ -120,11 +124,34 @@ private:
     if (past_nondominated == archive_size_)
       return;
 
-    // TODO: calculate fitness
-
     if (past_nondominated < archive_size_)
     {
       // TODO: fill out with the best dominated individuals
+
+      // Strength:
+      strength_.clear();
+      std::fill_n(std::back_inserter(strength_), archive_.size(), 0.0);
+
+      const auto all_ix = util::indexes_of(archive_, strength_, fx_);
+      const auto dominated_ix = util::range(past_nondominated, archive_.size());
+      const auto nondominated_ix = util::range(0u, past_nondominated);
+
+      for (const auto i : all_ix)
+        for (const auto j : dominated_ix)
+          if (dominates(fx_[i], fx_[j]))
+            ++strength_[i];
+
+      // Raw Fitness:
+      for (const auto i : nondominated_ix)
+        archive_[i].fitness = 0.0;
+
+      for (const auto i : dominated_ix)
+        for (const auto j : all_ix)
+          if (dominates(fx_[j], fx_[i]))
+            archive_[i].fitness += strength_[j];
+
+      // TODO: Distances:
+      // TODO: Fitness:
     }
     else
     {
@@ -140,6 +167,7 @@ private:
   double mutation_rate_, crossover_rate_;
 
   std::vector<f_type> fx_;
+  std::vector<std::size_t> strength_;
 
   typename decltype(archive_)::const_iterator end_nondominated_;
 };
