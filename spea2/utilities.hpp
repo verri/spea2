@@ -52,12 +52,8 @@ using boost::make_iterator_range;
 template <std::size_t N>
 using point = boost::geometry::model::point<double, N, boost::geometry::cs::cartesian>;
 
-template <std::size_t N> using indexed_point = std::pair<point<N>, std::size_t>;
-
 template <std::size_t N>
-using rtree = boost::geometry::index::rtree< //
-  std::pair<point<N>, std::size_t>,          //
-  boost::geometry::index::rstar<32>>;
+using rtree = boost::geometry::index::rtree<point<N>, boost::geometry::index::rstar<32>>;
 
 namespace detail
 {
