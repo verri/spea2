@@ -77,9 +77,10 @@ template <typename T> using use_mutate = decltype(std::declval<T&>().mutate(0.0)
 template <typename T> using has_mutate = meta::compiles<T, use_mutate>;
 
 template <typename T>
-using use_crossover = decltype(std::declval<T&>().crossover(std::declval<T&>()));
+using use_recombine =
+  decltype(recombine(std::declval<const T&>(), std::declval<const T&>()));
 
-template <typename T> using has_crossover = meta::compiles<T, use_crossover>;
+template <typename T> using has_recombine = meta::compiles<T, use_recombine>;
 
 template <typename T> using use_f = decltype(std::declval<const T&>().f());
 
@@ -93,13 +94,13 @@ template <typename T, typename E = void> struct Individual : std::false_type
 
 template <typename T>
 struct Individual<T,
-                  meta::requires<meta::conjunction<               //
-                    meta::compiles<T, detail::has_mutate>,        //
-                    std::is_same<detail::use_mutate<T>, void>,    //
-                    meta::compiles<T, detail::has_crossover>,     //
-                    std::is_same<detail::use_crossover<T>, void>, //
-                    meta::compiles<T, detail::has_f>,             //
-                    detail::is_double_array<detail::use_f<T>>     //
+                  meta::requires<meta::conjunction<                            //
+                    meta::compiles<T, detail::has_mutate>,                     //
+                    std::is_same<detail::use_mutate<T>, void>,                 //
+                    meta::compiles<T, detail::has_recombine>,                  //
+                    std::is_same<detail::use_recombine<T>, std::array<T, 2u>>, //
+                    meta::compiles<T, detail::has_f>,                          //
+                    detail::is_double_array<detail::use_f<T>>                  //
                     >>> : std::true_type
 {
 };

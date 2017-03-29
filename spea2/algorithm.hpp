@@ -54,13 +54,13 @@ public:
   };
 
   algorithm(std::vector<individual_type> population, std::size_t archive_size,
-            double mutation_rate, double crossover_rate, unsigned seed)
+            double mutation_rate, double recombination_rate, unsigned seed)
     : next_population_(std::move(population))
     , population_size_(next_population_.size())
     , archive_size_(archive_size)
     , k_(std::sqrt(population_size_ + archive_size_))
     , mutation_rate_(mutation_rate)
-    , crossover_rate_(crossover_rate)
+    , recombination_rate_(recombination_rate)
     , generator_(seed)
   {
     archive_.reserve(next_population_.size() + archive_size_);
@@ -73,21 +73,37 @@ public:
   // archive and nondominated sets.
   auto iterate() -> void
   {
-    // == Mating Selection ==
+    // == Mating Selection, Recombination and Mutation ==
     // We perform binary tournament selection with replacement on the archive.
     auto dist = std::uniform_int_distribution<std::size_t>(0u, archive_.size() - 1u);
-    while (next_population_.size() < population_size_)
-    {
+    const auto binary_tournament = [&]() -> const individual_type& {
       const auto i = rand(dist);
       const auto j = rand(dist);
-      next_population_.push_back(
-        archive_[i].fitness < archive_[j].fitness ? archive_[i].x : archive_[j].x);
-    }
+      return archive_[i].fitness < archive_[j].fitness ? archive_[i].x : archive_[j].x;
+    };
 
-    // == Recombination and Mutation ==
-    // TODO: tirar dúvidas com o professor!
-    for (auto& x : next_population_)
-      x.mutate(mutation_rate_);
+    while (next_population_.size() < population_size_)
+    {
+      // Two binary tournament to select the parents.
+      const auto& parent1 = binary_tournament();
+      const auto& parent2 = binary_tournament();
+
+      // Children are either a recombination or the parents themselves.
+      auto children = [&]() -> std::array<individual_type, 2u> {
+        if (rand(dist) < recombination_rate_)
+          return recombine(parent1, parent2);
+        return {{parent1, parent2}};
+      }();
+
+      // Mutate and put children in the new population.
+      for (auto& child : children)
+      {
+        child.mutate(mutation_rate_);
+        next_population_.push_back(std::move(child));
+        if (next_population_.size() == population_size_)
+          break;
+      }
+    }
 
     // == Environmental Selection ==
     environmental_selection();
@@ -261,7 +277,7 @@ private:
   std::vector<individual_type> next_population_;
   std::vector<solution_type> archive_;
   const std::size_t population_size_, archive_size_, k_;
-  const double mutation_rate_, crossover_rate_;
+  const double mutation_rate_, recombination_rate_;
 
   std::vector<std::size_t> strength_;
   typename decltype(archive_)::const_iterator end_nondominated_;
@@ -271,10 +287,10 @@ private:
 
 template <typename T, typename = meta::requires<Individual<T>>>
 auto make_algorithm(std::vector<T> population, std::size_t archive_size,
-                    double mutation_rate, double crossover_rate, unsigned seed)
+                    double mutation_rate, double recombination_rate, unsigned seed)
   -> algorithm<std::tuple_size<detail::use_f<T>>::value, T>
 {
-  return {std::move(population), archive_size, mutation_rate, crossover_rate, seed};
+  return {std::move(population), archive_size, mutation_rate, recombination_rate, seed};
 }
 
 } // namespace spea2

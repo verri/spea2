@@ -33,6 +33,12 @@ public:
 
   auto crossover(individual& other) -> void { std::swap(x, other.x); }
 
+  friend auto recombine(const individual& a, const individual& b)
+    -> std::array<individual, 2u>
+  {
+    return {{b, a}};
+  };
+
   friend auto operator<<(std::ostream& os, const individual& i) -> std::ostream&
   {
     const auto fx = i.f();
