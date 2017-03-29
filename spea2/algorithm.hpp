@@ -293,6 +293,13 @@ auto make_algorithm(std::vector<T> population, std::size_t archive_size,
   return {std::move(population), archive_size, mutation_rate, recombination_rate, seed};
 }
 
+template <typename T, typename = meta::fallback<Individual<T>>>
+auto make_algorithm(std::vector<T>, std::size_t, double, double, unsigned)
+{
+  static_assert(meta::always_false<T>::value,
+                "Individual type doesn't complies with the required concepts");
+}
+
 } // namespace spea2
 
 #endif // SPEA2_ALGORITHM_HPP
