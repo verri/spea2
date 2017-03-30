@@ -72,36 +72,45 @@ template <std::size_t N> struct is_double_array<std::array<double, N>> : std::tr
 {
 };
 
-template <typename T> using use_mutate = decltype(std::declval<T&>().mutate(0.0));
+template <typename T>
+using use_mutate =
+  decltype(std::declval<T&>().mutate(std::declval<typename T::individual_type&>(), 0.0));
 
 template <typename T> using has_mutate = meta::compiles<T, use_mutate>;
 
 template <typename T>
-using use_recombine =
-  decltype(recombine(std::declval<const T&>(), std::declval<const T&>()));
+using use_recombine = decltype(
+  std::declval<T&>().recombine(std::declval<const typename T::individual_type&>(),
+                               std::declval<const typename T::individual_type&>()));
 
 template <typename T> using has_recombine = meta::compiles<T, use_recombine>;
 
-template <typename T> using use_f = decltype(std::declval<const T&>().f());
+template <typename T>
+using use_evaluate = decltype(
+  std::declval<const T&>().evaluate(std::declval<const typename T::individual_type&>()));
 
-template <typename T> using has_f = meta::compiles<T, use_f>;
+template <typename T> using has_evaluate = meta::compiles<T, use_evaluate>;
 
 } // namespace detail
 
-template <typename T, typename E = void> struct Individual : std::false_type
+template <typename T, typename E = void> struct Problem : std::false_type
 {
 };
 
 template <typename T>
-struct Individual<T,
-                  meta::requires<meta::conjunction<                            //
-                    meta::compiles<T, detail::has_mutate>,                     //
-                    std::is_same<detail::use_mutate<T>, void>,                 //
-                    meta::compiles<T, detail::has_recombine>,                  //
-                    std::is_same<detail::use_recombine<T>, std::array<T, 2u>>, //
-                    meta::compiles<T, detail::has_f>,                          //
-                    detail::is_double_array<detail::use_f<T>>                  //
-                    >>> : std::true_type
+struct Problem<
+  T,
+  meta::requires<meta::conjunction<            //
+    meta::compiles<T, detail::has_mutate>,     //
+    std::is_same<detail::use_mutate<T>, void>, //
+    meta::compiles<T, detail::has_recombine>,  //
+    std::is_same<detail::use_recombine<T>,
+                 std::array<typename T::individual_type, 2u>>, //
+    meta::compiles<T, detail::has_evaluate>,                   //
+    detail::is_double_array<detail::use_evaluate<T>>,          //
+    std::integral_constant<bool, (T::objective_count ==
+                                  std::tuple_size<detail::use_evaluate<T>>::value)> //
+    >>> : std::true_type
 {
 };
 } // namespace spea2

@@ -23,30 +23,40 @@ public:
   {
   }
 
-  auto f() const -> std::array<double, 2u> { return {{f1(x), f2(x)}}; }
+  operator double() const { return x; }
 
-  auto mutate(double rate) -> void
+  friend auto operator<<(std::ostream& os, const individual& x) -> std::ostream&
+  {
+    return os << "x = " << static_cast<double>(x) << ",\tf(x) = [" << f1(x) << ", "
+              << f2(x) << ']';
+  }
+
+private:
+  double x;
+};
+
+class problem
+{
+public:
+  static constexpr auto objective_count = 2ul;
+  using individual_type = individual;
+
+  auto evaluate(individual_type x) const -> std::array<double, objective_count>
+  {
+    return {{f1(x), f2(x)}};
+  }
+
+  auto mutate(individual_type& x, double rate) const -> void
   {
     if (drand() < rate)
       x = drand();
   }
 
-  auto crossover(individual& other) -> void { std::swap(x, other.x); }
-
-  friend auto recombine(const individual& a, const individual& b)
-    -> std::array<individual, 2u>
+  auto recombine(const individual_type& a, const individual_type& b) const
+    -> std::array<individual_type, 2u>
   {
     return {{b, a}};
   };
-
-  friend auto operator<<(std::ostream& os, const individual& i) -> std::ostream&
-  {
-    const auto fx = i.f();
-    return os << "x = " << i.x << ",\tf(x) = [" << fx[0] << ", " << fx[1] << ']';
-  }
-
-private:
-  double x;
 };
 
 TEST_CASE("Simple test problem", "[foobar]")
@@ -57,7 +67,8 @@ TEST_CASE("Simple test problem", "[foobar]")
                   drand);
 
   const auto seed = std::random_device{}();
-  auto model = spea2::make_algorithm(std::move(initial_population), 5u, 0.1, 0.4, seed);
+  auto model =
+    spea2::make_algorithm(problem{}, std::move(initial_population), 5u, 0.1, 0.4, seed);
 
   std::cout << std::setprecision(6) << std::fixed;
   for (auto t = 0u; t < 3; ++t)
