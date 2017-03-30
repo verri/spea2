@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
-#include <iosfwd>
 #include <random>
 #include <type_traits>
 #include <vector>
@@ -45,11 +44,6 @@ public:
     individual_type x;
     objective_type fx;
     double fitness;
-
-    friend auto operator<<(std::ostream& os, const solution_type& s) -> std::ostream&
-    {
-      return os << s.x << ",\tfitness = " << s.fitness;
-    }
   };
 
   algorithm(T problem, std::vector<individual_type> population, std::size_t archive_size,

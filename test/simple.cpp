@@ -63,6 +63,12 @@ public:
   };
 };
 
+auto operator<<(std::ostream& os, const spea2::algorithm<problem>::solution_type& s)
+  -> std::ostream&
+{
+  return os << s.x << ",\tfitness = " << s.fitness;
+}
+
 TEST_CASE("Simple test problem", "[foobar]")
 {
   auto initial_population = std::vector<individual>{};
