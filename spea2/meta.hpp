@@ -82,7 +82,8 @@ template <typename T> using has_mutate = meta::compiles<T, use_mutate>;
 template <typename T>
 using use_recombine = decltype(
   std::declval<T&>().recombine(std::declval<const typename T::individual_type&>(),
-                               std::declval<const typename T::individual_type&>()));
+                               std::declval<const typename T::individual_type&>(),
+                               std::declval<typename T::generator_type&>()));
 
 template <typename T> using has_recombine = meta::compiles<T, use_recombine>;
 

@@ -56,8 +56,8 @@ public:
       x = drand(g);
   }
 
-  auto recombine(const individual_type& a, const individual_type& b) const
-    -> std::array<individual_type, 2u>
+  auto recombine(const individual_type& a, const individual_type& b,
+                 generator_type&) const -> std::array<individual_type, 2u>
   {
     return {{b, a}};
   };

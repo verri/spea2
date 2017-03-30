@@ -86,7 +86,7 @@ public:
       // Children are either a recombination or the parents themselves.
       auto children = [&]() -> std::array<individual_type, 2u> {
         if (draw(recombination_rate_))
-          return problem_.recombine(parent1, parent2);
+          return problem_.recombine(parent1, parent2, generator_);
         return {{parent1, parent2}};
       }();
 
