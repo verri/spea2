@@ -74,7 +74,8 @@ template <std::size_t N> struct is_double_array<std::array<double, N>> : std::tr
 
 template <typename T>
 using use_mutate =
-  decltype(std::declval<T&>().mutate(std::declval<typename T::individual_type&>(), 0.0));
+  decltype(std::declval<T&>().mutate(std::declval<typename T::individual_type&>(), 0.0,
+                                     std::declval<typename T::generator_type&>()));
 
 template <typename T> using has_mutate = meta::compiles<T, use_mutate>;
 

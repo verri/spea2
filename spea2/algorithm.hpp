@@ -36,6 +36,7 @@ template <typename T> class algorithm<T, meta::requires<Problem<T>>>
 {
   static constexpr auto objective_count = T::objective_count;
   using individual_type = typename T::individual_type;
+  using generator_type = typename T::generator_type;
   using objective_type = detail::use_evaluate<T>;
 
 public:
@@ -52,7 +53,7 @@ public:
   };
 
   algorithm(T problem, std::vector<individual_type> population, std::size_t archive_size,
-            double mutation_rate, double recombination_rate, unsigned seed)
+            double mutation_rate, double recombination_rate, generator_type generator)
     : problem_(std::move(problem))
     , next_population_(std::move(population))
     , population_size_(next_population_.size())
@@ -60,7 +61,7 @@ public:
     , k_(std::sqrt(population_size_ + archive_size_))
     , mutation_rate_(mutation_rate)
     , recombination_rate_(recombination_rate)
-    , generator_(seed)
+    , generator_(std::move(generator))
   {
     archive_.reserve(next_population_.size() + archive_size_);
     strength_.reserve(population.size() + archive_size_);
@@ -74,10 +75,11 @@ public:
   {
     // == Mating Selection, Recombination and Mutation ==
     // We perform binary tournament selection with replacement on the archive.
-    auto dist = std::uniform_int_distribution<std::size_t>(0u, archive_.size() - 1u);
+    auto indexes = std::uniform_int_distribution<std::size_t>(0u, archive_.size() - 1u);
+
     const auto binary_tournament = [&]() -> const individual_type& {
-      const auto i = rand(dist);
-      const auto j = rand(dist);
+      const auto i = sample_from(indexes);
+      const auto j = sample_from(indexes);
       return archive_[i].fitness < archive_[j].fitness ? archive_[i].x : archive_[j].x;
     };
 
@@ -89,7 +91,7 @@ public:
 
       // Children are either a recombination or the parents themselves.
       auto children = [&]() -> std::array<individual_type, 2u> {
-        if (rand(dist) < recombination_rate_)
+        if (draw(recombination_rate_))
           return problem_.recombine(parent1, parent2);
         return {{parent1, parent2}};
       }();
@@ -97,7 +99,7 @@ public:
       // Mutate and put children in the new population.
       for (auto& child : children)
       {
-        problem_.mutate(child, mutation_rate_);
+        problem_.mutate(child, mutation_rate_, generator_);
         next_population_.push_back(std::move(child));
         if (next_population_.size() == population_size_)
           break;
@@ -268,9 +270,15 @@ private:
     }
   }
 
-  template <typename Distribution> auto rand(Distribution& dist)
+  template <typename Distribution> auto sample_from(Distribution& dist)
   {
     return dist(generator_);
+  }
+
+  auto draw(double chance)
+  {
+    return std::generate_canonical<double, std::numeric_limits<double>::digits>(
+             generator_) < chance;
   }
 
   T problem_;
@@ -283,21 +291,20 @@ private:
   std::vector<std::size_t> strength_;
   typename decltype(archive_)::const_iterator end_nondominated_;
 
-  std::mt19937 generator_;
+  generator_type generator_;
 };
 
-template <typename T, typename = meta::requires<Problem<T>>>
-auto make_algorithm(T problem, std::vector<typename T::individual_type> population,
-                    std::size_t archive_size, double mutation_rate,
-                    double recombination_rate, unsigned seed) -> algorithm<T>
+template <typename T, typename I, typename G, typename = meta::requires<Problem<T>>>
+auto make_algorithm(T problem, std::vector<I> population, std::size_t archive_size,
+                    double mutation_rate, double recombination_rate, G generator)
+  -> algorithm<T>
 {
   return {std::move(problem), std::move(population), archive_size,
-          mutation_rate,      recombination_rate,    seed};
+          mutation_rate,      recombination_rate,    std::move(generator)};
 }
 
-template <typename T, typename = meta::fallback<Problem<T>>>
-auto make_algorithm(T, std::vector<typename T::individual_type>, std::size_t, double,
-                    double, unsigned)
+template <typename T, typename... Args, typename = meta::fallback<Problem<T>>>
+auto make_algorithm(T, Args&&...)
 {
   static_assert(meta::always_false<T>::value,
                 "Problem type doesn't complies with the required concept");

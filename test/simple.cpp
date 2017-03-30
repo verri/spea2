@@ -13,7 +13,10 @@ static auto f1(double x)
 static auto g(double x) { return 1.0 + 9 * std::pow(x, 0.25); }
 static auto f2(double x) { return g(x) * (1.0 - square(f1(x) / g(x))); }
 
-static auto drand() { return static_cast<double>(std::rand()) / RAND_MAX; }
+template <typename G> static auto drand(G& g)
+{
+  return std::generate_canonical<double, std::numeric_limits<double>::digits>(g);
+}
 
 class individual
 {
@@ -40,16 +43,17 @@ class problem
 public:
   static constexpr auto objective_count = 2ul;
   using individual_type = individual;
+  using generator_type = std::mt19937;
 
   auto evaluate(individual_type x) const -> std::array<double, objective_count>
   {
     return {{f1(x), f2(x)}};
   }
 
-  auto mutate(individual_type& x, double rate) const -> void
+  auto mutate(individual_type& x, double rate, generator_type& g) const -> void
   {
-    if (drand() < rate)
-      x = drand();
+    if (drand(g) < rate)
+      x = drand(g);
   }
 
   auto recombine(const individual_type& a, const individual_type& b) const
@@ -62,13 +66,14 @@ public:
 TEST_CASE("Simple test problem", "[foobar]")
 {
   auto initial_population = std::vector<individual>{};
+  auto generator = std::mt19937{17u};
+
   initial_population.reserve(5u);
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
-                  drand);
+                  [&] { return drand(generator); });
 
-  const auto seed = std::random_device{}();
-  auto model =
-    spea2::make_algorithm(problem{}, std::move(initial_population), 5u, 0.1, 0.4, seed);
+  auto model = spea2::make_algorithm(problem{}, std::move(initial_population), 5u, 0.1,
+                                     0.4, std::move(generator));
 
   std::cout << std::setprecision(6) << std::fixed;
   for (auto t = 0u; t < 3; ++t)
