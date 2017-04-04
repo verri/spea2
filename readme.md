@@ -15,6 +15,44 @@ Older versions of Boost might work, but I haven't tested it.
 
 ## Example
 
+This library and all its requirements are header-only.  Thus, the only thing you need is to include
+the headers in your project.  The core of the library is the class `spea2::algorithm` which expects
+a user-defined optimization problem as a template argument.  Such feature enables a generic, optimized
+library with no virtual calls.
+
+The user-defined problem must comply with the following class:
+```c++
+class problem
+{
+public:
+  static constexpr std::size_t objective_count = /* ... */;
+  using individual_type = /* ... */;
+  using generator_type = /* ... */;
+
+  auto evaluate(const individual_type& x, generator_type&) const 
+    -> std::array<std::size_t, objective_count>;
+  
+  auto mutate(individual_type& x, generator_type& g) const 
+    -> void;
+  
+  auto recombine(const individual_type& x, const individual_type& y, generator_type& g) const
+    -> std::array<individual_type, objective_count>;
+    
+   /* ... */
+};
+
+```
+
+To illustrate the usage, let's implement a multi-objective
+[Knapsack problem](https://en.wikipedia.org/wiki/Knapsack_problem).
+
+First, we include the required headers.
+```c++
+#include <spea2/algorithm> // spea2::make_algorithm, spea2::draw
+#include <random>          // std::mt19937
+#include <valarray>        // std::valarray
+```
+
 ## Contributing
 
 I've tried to implement it as close as possible to the original algorithm.
