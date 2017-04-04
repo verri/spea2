@@ -25,6 +25,11 @@ static auto dominates(const std::array<T, N>& a, const std::array<T, N>& b)
   return true;
 }
 
+template <typename G> static auto draw(double rate, G& g)
+{
+  return std::generate_canonical<double, std::numeric_limits<double>::digits>(g) < rate;
+}
+
 template <typename T, typename E = void> class algorithm
 {
   static_assert(meta::always_false<T>::value,

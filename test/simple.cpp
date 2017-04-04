@@ -45,7 +45,7 @@ public:
   using individual_type = individual;
   using generator_type = std::mt19937;
 
-  auto evaluate(individual_type x, generator_type&) const
+  auto evaluate(const individual_type& x, generator_type&) const
     -> std::array<double, objective_count>
   {
     return {{f1(x), f2(x)}};

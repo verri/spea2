@@ -1,11 +1,11 @@
 SUFFIXES += .d
 
-SRC = simple.cpp
+SRC = simple.cpp knapsack.cpp
 
 OBJ := $(SRC:.cpp=.o) test_suite.o
 DEP := $(SRC:.cpp=.d) test_suite.d
 
-CXXFLAGS += -std=c++14 -Wall -Wextra -pedantic -I..
+CXXFLAGS += -O2 -std=c++14 -Wall -Wextra -pedantic -I..
 
 NODEPS = clean
 
