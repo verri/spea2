@@ -127,7 +127,7 @@ TEST_CASE("Knapsack", "")
     spea2::make_algorithm(std::move(problem), std::move(initial_population), archive_size,
                           std::move(generator));
 
-  // Iterate and print best in each iteration.
+  // Iterate
   for (auto t = 0u; t < generation_count; ++t)
     algorithm.iterate();
 
