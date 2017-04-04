@@ -72,7 +72,7 @@ private:
   double mutation_rate, recombination_rate;
 };
 
-static_assert(spea2::Problem<knapsack>::value,
+static_assert(spea2::meta::Problem<knapsack>::value,
               "Knapsack problem doesn't comply with spea2::Problem concept");
 
 template <typename F> static auto generate_random_valarray(std::size_t size, F f)

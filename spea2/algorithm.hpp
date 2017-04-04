@@ -36,12 +36,12 @@ template <typename T, typename E = void> class algorithm
                 "Problem type doesn't complies with the required concept");
 };
 
-template <typename T> class algorithm<T, meta::requires<Problem<T>>>
+template <typename T> class algorithm<T, meta::requires<meta::Problem<T>>>
 {
   static constexpr auto objective_count = T::objective_count;
   using individual_type = typename T::individual_type;
   using generator_type = typename T::generator_type;
-  using objective_type = detail::use_evaluate<T>;
+  using objective_type = meta::evaluate_result<T>;
 
 public:
   struct solution_type
@@ -287,14 +287,14 @@ private:
   generator_type generator_;
 };
 
-template <typename T, typename I, typename G, typename = meta::requires<Problem<T>>>
+template <typename T, typename I, typename G, typename = meta::requires<meta::Problem<T>>>
 auto make_algorithm(T problem, std::vector<I> population, std::size_t archive_size,
                     G generator) -> algorithm<T>
 {
   return {std::move(problem), std::move(population), archive_size, std::move(generator)};
 }
 
-template <typename T, typename... Args, typename = meta::fallback<Problem<T>>>
+template <typename T, typename... Args, typename = meta::fallback<meta::Problem<T>>>
 auto make_algorithm(T, Args&&...)
 {
   static_assert(meta::always_false<T>::value,
