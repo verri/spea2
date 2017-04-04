@@ -13,7 +13,7 @@ To use the library, you will need
 
 Older versions of Boost might work, but I haven't tested it.
 
-## Example
+## Documentation
 
 This library and all its requirements are header-only.  Thus, the only thing you need is to include
 the headers in your project.  The core of the library is the class `spea2::algorithm` which expects
@@ -29,19 +29,46 @@ public:
   using individual_type = /* ... */;
   using generator_type = /* ... */;
 
-  auto evaluate(const individual_type& x, generator_type&) const 
-    -> std::array<std::size_t, objective_count>;
+  auto evaluate(const individual_type&, generator_type&)
+    -> std::array<double, objective_count>;
   
-  auto mutate(individual_type& x, generator_type& g) const 
-    -> void;
-  
-  auto recombine(const individual_type& x, const individual_type& y, generator_type& g) const
+  auto recombine(const individual_type&, const individual_type&, generator_type&)
     -> std::array<individual_type, objective_count>;
+  
+  auto mutate(individual_type&, generator_type&) 
+    -> void;
     
    /* ... */
 };
-
 ```
+
+The static member `problem::objective_count` is the number of objectives in the problem.
+The aliases (or nested classes) `problem::individual_type` and `problem::generator_type` 
+are the type of the individuals and a 
+[random number engine](http://en.cppreference.com/w/cpp/numeric/random), respectively.
+
+The function members `problem::evaluate`, `problem::recombine`, and `problem::mutate` 
+define the functioning of the algorithm.  
+
+`problem::evaluate` is called *exactly once* per individual during the execution of the algorithm.
+It receives the individual to evaluate and a random engine, and it must return one `double`
+per objective.  The algorithm will try to minimize such objectives.
+
+`problem::recombine` is called for every two selected (by binary tournament) individuals
+from the archive to populate the next generation.  It receives references to the individuals 
+and a random engine, and it must return two new individual.  The new individuals (which can
+be the same, if the user wants to) go the next population.
+
+`problem::mutate` is called *exactly once* per individual outputed by `problem::recombine`.
+It receives the individual and a random engine.  This is the only function that can (and should)
+modify the input individual.
+
+The class doesn't necessarily need to have exactly the same function-member signatures,
+however the return time must match. Parameters type must be compatible.  If the user-defined
+class doesn't comply with the requirement, a `static_assert` is triggered, avoiding nasty
+compiler cries.
+
+## Example
 
 To illustrate the usage, let's implement a multi-objective
 [Knapsack problem](https://en.wikipedia.org/wiki/Knapsack_problem).
