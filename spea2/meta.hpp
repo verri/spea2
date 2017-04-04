@@ -88,9 +88,9 @@ using use_recombine = decltype(
 template <typename T> using has_recombine = meta::compiles<T, use_recombine>;
 
 template <typename T>
-using use_evaluate = decltype(
-  std::declval<const T&>().evaluate(std::declval<const typename T::individual_type&>(),
-                                    std::declval<typename T::generator_type&>()));
+using use_evaluate =
+  decltype(std::declval<T&>().evaluate(std::declval<const typename T::individual_type&>(),
+                                       std::declval<typename T::generator_type&>()));
 
 template <typename T> using has_evaluate = meta::compiles<T, use_evaluate>;
 
@@ -103,16 +103,15 @@ template <typename T, typename E = void> struct Problem : std::false_type
 template <typename T>
 struct Problem<
   T,
-  meta::requires<meta::conjunction<            //
-    meta::compiles<T, detail::has_mutate>,     //
-    std::is_same<detail::use_mutate<T>, void>, //
-    meta::compiles<T, detail::has_recombine>,  //
-    std::is_same<detail::use_recombine<T>,
-                 std::array<typename T::individual_type, 2u>>, //
-    meta::compiles<T, detail::has_evaluate>,                   //
-    detail::is_double_array<detail::use_evaluate<T>>,          //
-    std::integral_constant<bool, (T::objective_count ==
-                                  std::tuple_size<detail::use_evaluate<T>>::value)> //
+  meta::requires<meta::conjunction<
+    meta::compiles<T, detail::has_mutate>, std::is_same<detail::use_mutate<T>, void>,
+    meta::compiles<T, detail::has_recombine>,
+    std::is_same<detail::use_recombine<T>, std::array<typename T::individual_type, 2u>>,
+    meta::compiles<T, detail::has_evaluate>,
+    detail::is_double_array<detail::use_evaluate<T>>,
+    std::integral_constant<bool, (T::objective_count > 0 &&
+                                  T::objective_count ==
+                                    std::tuple_size<detail::use_evaluate<T>>::value)> //
     >>> : std::true_type
 {
 };

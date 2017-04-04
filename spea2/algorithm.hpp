@@ -113,8 +113,8 @@ public:
   auto problem() -> T& { return problem_; }
   auto problem() const -> const T& { return problem_; }
 
-  auto generator() -> T& { return generator_; }
-  auto generator() const -> const T& { return generator_; }
+  auto generator() -> generator_type& { return generator_; }
+  auto generator() const -> const generator_type& { return generator_; }
 
 private:
   // === Step 3 of the algorithm ===

@@ -33,9 +33,10 @@ public:
   auto evaluate(const individual_type& x, generator_type&) const
   {
     auto result = std::array<double, objective_count>{};
+    const auto overweight = weights[x].sum() > capacity;
 
     for (auto i = 0ul; i < objective_count; ++i)
-      result[i] = weights[x].sum() > capacity ? 0.0 : -values[i][x].sum();
+      result[i] = overweight ? 0.0 : -values[i][x].sum();
 
     return result;
   }
