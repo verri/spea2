@@ -11,7 +11,7 @@ To use the library, you will need
   - [Boost.Range](http://www.boost.org/doc/libs/1_63_0/libs/range/doc/html/index.html)
   - [Boost.Geometry](http://www.boost.org/doc/libs/1_63_0/libs/geometry/doc/html/index.html)
 
-Older versions of Boost might work, but I haven't tested it.
+Older versions of Boost might work, but I haven't tested them.
 
 ## Documentation
 
@@ -67,6 +67,52 @@ The class doesn't necessarily need to have exactly the same function-member sign
 however the return time must match. Parameters type must be compatible.  If the user-defined
 class doesn't comply with the requirement, a `static_assert` is triggered, avoiding nasty
 compiler cries.
+
+Once you define the problem class, you can use the algorithm:
+```c++
+int main() 
+{
+  // ===== Prepare input and instanciate the algorithm ===== //
+  
+  problem myproblem = /* ... */
+  std::vector<problem::individual_type> initial_population = /* ... */;
+  std::size_t archive_size = /* ... */
+  std::default_random_engine generator;
+  
+  spea2::algorithm<myproblem> algorithm(std::move(myproblem), std::move(initial_population), archive_size, std::move(generator));
+  // or
+  // auto algorithm = spea2::make_algorithm(std::move(myproblem), std::move(initial_population), archive_size, std::move(generator));
+  
+  // ===== Iterate the algorithm ===== //
+  
+  const unsigned generation_count = 100u;
+  for (unsigned i = 0u; i < 100; ++i)
+    algorithm.iterate();
+    
+  // ===== Retrieve solution information ===== //
+    
+  // Every candidate solution in the archive.
+  for (const spea2::algorithm<problem>::solution_type& solution : algorithm.archive())
+  {
+    const problem::individual_type& x = solution.x;
+    const std::array<double, problem::objective_count>& fx = solution.fx;
+    double fitness = solution.fitness; // As described in the paper.
+  }
+  
+  // Only non-dominated solutions.
+  for (const auto& solution : algorithm.nondominated())
+  {
+    const problem::individual_type& x = solution.x;
+    const std::array<double, problem::objective_count>& fx = solution.fx;
+    double fitness = solution.fitness; // As described in the paper.
+  }
+  
+  // ===== Other helpers ===== //
+  
+  std::default_random_engine& generator = algorithm.engine();
+  problem& problem = algorithm.problem();
+}
+```
 
 ## Example
 
