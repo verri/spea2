@@ -74,7 +74,7 @@ template <std::size_t N> struct is_double_array<std::array<double, N>> : std::tr
 
 template <typename T>
 using use_mutate =
-  decltype(std::declval<T&>().mutate(std::declval<typename T::individual_type&>(), 0.0,
+  decltype(std::declval<T&>().mutate(std::declval<typename T::individual_type&>(),
                                      std::declval<typename T::generator_type&>()));
 
 template <typename T> using has_mutate = meta::compiles<T, use_mutate>;
@@ -89,7 +89,8 @@ template <typename T> using has_recombine = meta::compiles<T, use_recombine>;
 
 template <typename T>
 using use_evaluate = decltype(
-  std::declval<const T&>().evaluate(std::declval<const typename T::individual_type&>()));
+  std::declval<const T&>().evaluate(std::declval<const typename T::individual_type&>(),
+                                    std::declval<typename T::generator_type&>()));
 
 template <typename T> using has_evaluate = meta::compiles<T, use_evaluate>;
 

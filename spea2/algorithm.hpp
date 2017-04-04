@@ -47,14 +47,12 @@ public:
   };
 
   algorithm(T problem, std::vector<individual_type> population, std::size_t archive_size,
-            double mutation_rate, double recombination_rate, generator_type generator)
+            generator_type generator)
     : problem_(std::move(problem))
     , next_population_(std::move(population))
     , population_size_(next_population_.size())
     , archive_size_(archive_size)
     , k_(std::sqrt(population_size_ + archive_size_))
-    , mutation_rate_(mutation_rate)
-    , recombination_rate_(recombination_rate)
     , generator_(std::move(generator))
   {
     archive_.reserve(next_population_.size() + archive_size_);
@@ -84,16 +82,12 @@ public:
       const auto& parent2 = binary_tournament();
 
       // Children are either a recombination or the parents themselves.
-      auto children = [&]() -> std::array<individual_type, 2u> {
-        if (draw(recombination_rate_))
-          return problem_.recombine(parent1, parent2, generator_);
-        return {{parent1, parent2}};
-      }();
+      auto children = problem_.recombine(parent1, parent2, generator_);
 
       // Mutate and put children in the new population.
       for (auto& child : children)
       {
-        problem_.mutate(child, mutation_rate_, generator_);
+        problem_.mutate(child, generator_);
         next_population_.push_back(std::move(child));
         if (next_population_.size() == population_size_)
           break;
@@ -109,7 +103,13 @@ public:
     return util::make_iterator_range(archive_.begin(), end_nondominated_);
   }
 
-  decltype(auto) archive() const { return (archive_); }
+  auto archive() const -> const std::vector<solution_type>& { return archive_; }
+
+  auto problem() -> T& { return problem_; }
+  auto problem() const -> const T& { return problem_; }
+
+  auto generator() -> T& { return generator_; }
+  auto generator() const -> const T& { return generator_; }
 
 private:
   // === Step 3 of the algorithm ===
@@ -122,7 +122,8 @@ private:
     // In the next steps, we apply the necessary operations to keep the best solutions.
     std::transform(next_population_.begin(), next_population_.end(),
                    std::back_inserter(archive_), [&](auto& x) -> solution_type {
-                     auto fx = problem_.evaluate(const_cast<const individual_type&>(x));
+                     auto fx = problem_.evaluate(const_cast<const individual_type&>(x),
+                                                 generator_);
                      return {std::move(x), std::move(fx), 0.0};
                    });
 
@@ -269,18 +270,11 @@ private:
     return dist(generator_);
   }
 
-  auto draw(double chance)
-  {
-    return std::generate_canonical<double, std::numeric_limits<double>::digits>(
-             generator_) < chance;
-  }
-
   T problem_;
 
   std::vector<individual_type> next_population_;
   std::vector<solution_type> archive_;
   const std::size_t population_size_, archive_size_, k_;
-  const double mutation_rate_, recombination_rate_;
 
   std::vector<std::size_t> strength_;
   typename decltype(archive_)::const_iterator end_nondominated_;
@@ -290,11 +284,9 @@ private:
 
 template <typename T, typename I, typename G, typename = meta::requires<Problem<T>>>
 auto make_algorithm(T problem, std::vector<I> population, std::size_t archive_size,
-                    double mutation_rate, double recombination_rate, G generator)
-  -> algorithm<T>
+                    G generator) -> algorithm<T>
 {
-  return {std::move(problem), std::move(population), archive_size,
-          mutation_rate,      recombination_rate,    std::move(generator)};
+  return {std::move(problem), std::move(population), archive_size, std::move(generator)};
 }
 
 template <typename T, typename... Args, typename = meta::fallback<Problem<T>>>

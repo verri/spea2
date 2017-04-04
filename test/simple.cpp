@@ -45,21 +45,24 @@ public:
   using individual_type = individual;
   using generator_type = std::mt19937;
 
-  auto evaluate(individual_type x) const -> std::array<double, objective_count>
+  auto evaluate(individual_type x, generator_type&) const
+    -> std::array<double, objective_count>
   {
     return {{f1(x), f2(x)}};
   }
 
-  auto mutate(individual_type& x, double rate, generator_type& g) const -> void
+  auto mutate(individual_type& x, generator_type& g) const -> void
   {
-    if (drand(g) < rate)
+    if (drand(g) < 0.1)
       x = drand(g);
   }
 
   auto recombine(const individual_type& a, const individual_type& b,
-                 generator_type&) const -> std::array<individual_type, 2u>
+                 generator_type& g) const -> std::array<individual_type, 2u>
   {
-    return {{b, a}};
+    if (drand(g) < 0.4)
+      return {{b, a}};
+    return {{a, b}};
   };
 };
 
@@ -78,8 +81,8 @@ TEST_CASE("Simple test problem", "[foobar]")
   std::generate_n(std::back_inserter(initial_population), initial_population.capacity(),
                   [&] { return drand(generator); });
 
-  auto model = spea2::make_algorithm(problem{}, std::move(initial_population), 5u, 0.1,
-                                     0.4, std::move(generator));
+  auto model = spea2::make_algorithm(problem{}, std::move(initial_population), 5u,
+                                     std::move(generator));
 
   std::cout << std::setprecision(6) << std::fixed;
   for (auto t = 0u; t < 3; ++t)

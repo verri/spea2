@@ -5,7 +5,7 @@ SRC = simple.cpp
 OBJ := $(SRC:.cpp=.o) test_suite.o
 DEP := $(SRC:.cpp=.d) test_suite.d
 
-CXXFLAGS += -std=c++1z -Wall -Wextra -pedantic -I..
+CXXFLAGS += -std=c++14 -Wall -Wextra -pedantic -I..
 
 NODEPS = clean
 
