@@ -126,6 +126,87 @@ First, we include the required headers.
 #include <valarray>        // std::valarray
 ```
 
+Then, we define the problem class.
+```c++
+class knapsack
+{
+public:
+  static constexpr auto objective_count = 2ul;
+  using individual_type = std::valarray<bool>;
+  using generator_type = std::mt19937;
+
+  knapsack(std::array<std::valarray<double>, objective_count> values,
+           std::valarray<double> weights, double capacity, double mutation_rate,
+           double recombination_rate)
+  { 
+    /* ... */ 
+  }
+
+  auto evaluate(const individual_type& x, generator_type&) const
+  {
+    auto result = std::array<double, objective_count>{};
+    const auto overweight = weights[x].sum() > capacity;
+
+    for (auto i = 0ul; i < objective_count; ++i)
+      result[i] = overweight ? 0.0 : -values[i][x].sum();
+
+    return result;
+  }
+
+  auto mutate(individual_type& x, generator_type& g) const -> void
+  {
+    for (auto& allele : x)
+      if (spea2::draw(mutation_rate, g))
+        allele = !allele;
+  }
+
+  auto recombine(const individual_type& parent1, const individual_type& parent2,
+                 generator_type& g) const -> std::array<individual_type, objective_count>
+  {
+    if (!spea2::draw(recombination_rate, g))
+      return {{parent1, parent2}};
+
+    auto mask = individual_type(parent1.size());
+    for (auto& v : mask)
+      v = spea2::draw(0.5, g);
+
+    return {{
+      (parent1 && mask) || (parent2 && !mask), // first child
+      (parent1 && !mask) || (parent2 && mask)  // second child
+    }};
+  }
+
+private:
+  std::array<std::valarray<double>, objective_count> values;
+  std::valarray<double> weights;
+  double capacity;
+
+  double mutation_rate, recombination_rate;
+};
+```
+
+This problem describes a two-objectives knapsack problem.  We chose std::mt19937 the random number
+engine.  The genotype representation is a sequence of boolean values where each value indicates
+whether an items is in the bag or not.  Our problem instance stores:
+
+- `knapsack::values`: The values of each item for each objective.
+- `knapsack::weights`:  The weight of each item.
+- `knapsack::capacity`: The bag maximum capacity.
+- `knapsack::mutation_rate`: The chance of each allele being flipped.
+- `knapsack::recombination_rate`: The chance of crossover.
+
+Since we want to maximize the value of the bag, and `spea2::algorithm` minimizes the objective
+function, `knapsack::evaluate` returns the arithmetic inverse of the total value.  If the bag
+is storing more than can carry, the result is 0 for all objectives.
+
+`knapsack::mutate` flips every allele with chance `knapsack::mutation_rate`.  The utility
+function `spea2::draw(double rate, generator&)` returns `true` with chance `rate`.
+
+`knapsack::recombine` applies uniform crossover with chance `knapsack::recombination_rate`.
+Otherwise, it forwards the parents.
+
+For the complete source code see [knapsack.cpp](https://github.com/verri/spea2/blob/master/test/knapsack.cpp).
+
 ## Contributing
 
 I've tried to implement it as close as possible to the original algorithm.
