@@ -17,16 +17,6 @@ namespace spea2
 namespace util
 {
 
-template <typename T, typename F,
-          typename R = decltype(std::declval<F>()(std::declval<const T&>()))>
-auto vtransform(const std::vector<T>& from, const F& f) -> std::vector<R>
-{
-  std::vector<R> result;
-  result.reserve(from.size());
-  std::transform(from.begin(), from.end(), std::back_inserter(result), f);
-  return result;
-}
-
 template <
   typename Integer1, typename Integer2,
   typename = meta::requires<std::is_integral<Integer1>, std::is_integral<Integer2>>>
@@ -48,6 +38,8 @@ auto indexes_of(const Ts&... args)
 }
 
 using boost::make_iterator_range;
+using boost::geometry::index::nearest;
+using boost::geometry::distance;
 
 template <std::size_t N>
 using point = boost::geometry::model::point<double, N, boost::geometry::cs::cartesian>;
@@ -69,34 +61,23 @@ template <std::size_t N> auto to_point(const std::array<double, N>& arr)
   return detail::to_point(arr, std::make_index_sequence<N>());
 }
 
-using boost::geometry::index::query;
-using boost::geometry::index::nearest;
-
-namespace detail
-{
 template <typename T> class setter_iterator
 {
 public:
-  setter_iterator(T* value)
-    : ptr_{value}
+  explicit setter_iterator(T& value)
+    : ptr_{&value}
   {
   }
 
-  auto operator++() { return *this; }
-  auto operator++(int) { return *this; }
+  auto operator++() -> setter_iterator& { return *this; }
+  auto operator++(int) -> setter_iterator& { return *this; }
   auto operator*() -> T& { return *ptr_; }
 
 private:
   T* ptr_;
 };
-}
 
-template <typename T> auto setter(T& value) -> detail::setter_iterator<T>
-{
-  return &value;
-}
-
-using boost::geometry::distance;
+template <typename T> auto setter(T& value) { return setter_iterator<T>{value}; }
 
 } // namespace util
 } // namespace spea2

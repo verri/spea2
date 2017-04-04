@@ -53,12 +53,6 @@ using requires = std::enable_if_t<conjunction<Checks...>::value>;
 template <typename... Checks>
 using fallback = std::enable_if_t<conjunction<negation<Checks...>>::value>;
 
-template <typename R, typename... Checks>
-using requires_t = std::enable_if_t<conjunction<Checks...>::value, R>;
-
-template <typename R, typename... Checks>
-using fallback_t = std::enable_if_t<conjunction<negation<Checks...>>::value, R>;
-
 } // namespace meta
 
 namespace detail
