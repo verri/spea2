@@ -218,8 +218,7 @@ private:
 
     // Distances up to the kth neighbor are stored.
     // It may not be required to calculate so many distances, but we are doing
-    // so because the truncation procedure is probably rare and we want to
-    // comply to the original algorithm.
+    // so because we want to comply to the original algorithm.
     auto vdistances = std::vector<std::vector<double>>(nondominated_count);
     for (auto& distances : vdistances)
       distances.reserve(k_);
@@ -249,19 +248,9 @@ private:
       }
 
       // Find the index which have smallest distance, and "remove" it.
-      static const auto cmp = //
-        +[](const std::vector<double>& a, const std::vector<double>& b) -> bool {
-        for (const auto i : util::indexes_of(a, b))
-          if (a[i] < b[i])
-            return true;
-          else if (a[i] > b[i])
-            return false;
-        return true;
-      };
-
       const auto i = std::distance( //
         vdistances.begin(),         //
-        std::min_element(vdistances.begin(), vdistances.end(), cmp));
+        std::min_element(vdistances.begin(), vdistances.end()));
 
       --nondominated_count;
       tree.remove(util::to_point(archive_[i].fx));
