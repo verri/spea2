@@ -29,7 +29,7 @@ public:
   using individual_type = /* ... */;
   using generator_type = /* ... */;
 
-  auto evaluate(const individual_type&, generator_type&)
+  auto evaluate(individual_type&, generator_type&)
     -> std::array<double, objective_count>;
 
   auto recombine(const individual_type&, const individual_type&, generator_type&)

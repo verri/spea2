@@ -127,8 +127,7 @@ private:
     // In the next steps, we apply the necessary operations to keep the best solutions.
     std::transform(next_population_.begin(), next_population_.end(),
                    std::back_inserter(archive_), [&](auto& x) -> solution_type {
-                     auto fx = problem_.evaluate(const_cast<const individual_type&>(x),
-                                                 generator_);
+                     auto fx = problem_.evaluate(x, generator_);
                      return {std::move(x), std::move(fx), 0.0};
                    });
 
