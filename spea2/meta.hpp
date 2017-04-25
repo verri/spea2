@@ -51,7 +51,7 @@ template <typename... Checks>
 using requires = std::enable_if_t<conjunction<Checks...>::value>;
 
 template <typename... Checks>
-using fallback = std::enable_if_t<conjunction<negation<Checks...>>::value>;
+using fallback = std::enable_if_t<conjunction<negation<Checks>...>::value>;
 
 template <std::size_t N, typename T> struct is_double_array : std::false_type
 {
