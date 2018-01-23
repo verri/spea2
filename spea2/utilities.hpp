@@ -8,7 +8,7 @@
 #include <vector>
 
 #include <boost/geometry/algorithms/distance.hpp>
-#include <boost/geometry/geometries/point.hpp>
+#include <boost/geometry/geometry.hpp>
 #include <boost/geometry/index/rtree.hpp>
 #include <boost/range/irange.hpp>
 
